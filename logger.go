@@ -107,7 +107,7 @@ func NewLogger(opts ...Option) (logger *Logger) {
 			flushDuration:     1000,
 			writeOption:       WriteByMerged,
 			cutOption:         CutDaily,
-			writeLevel:        LevelFatal | LevelError | LevelWarning | LevelInfo | LevelDebug,
+			writeLevel:        0,
 			logSavePath:       "logs",
 			flushChan:         make(chan struct{}),
 			msgChan:           make(chan *logMessage, 1024),
