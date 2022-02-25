@@ -305,7 +305,7 @@ func (log *Logger) cut() {
 				return
 			}
 		case CutPer10M: // 每10M切割一次
-			if config.size < 5*1024*1024 {
+			if config.size < 10*1024*1024 {
 				return
 			}
 		case CutPer60M: // 每60M切割一次
