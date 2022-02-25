@@ -1,5 +1,11 @@
 package plogs
 
+import "time"
+
+const (
+	defaultCutDuration = 1 * time.Second
+)
+
 const (
 	_LevelBegin        = iota            // begin
 	LevelFatal   Level = 1 << (iota - 1) // 致命错误
@@ -78,6 +84,8 @@ func (l Level) subPath() (suffix string) {
 		suffix = "infos"
 	case LevelDebug:
 		suffix = "debugs"
+	case _LevelEnd:
+		suffix = "merged"
 	}
 	return
 }

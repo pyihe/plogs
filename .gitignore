@@ -16,3 +16,6 @@
 
 .idea
 *_test.go
+
+cmd/logs/
+logs/
