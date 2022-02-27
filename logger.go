@@ -8,16 +8,6 @@ import (
 	"time"
 )
 
-// 描述每一条日志信息，包括级别和内容
-type logMessage struct {
-	level   Level  // 日志级别
-	message string // 日志内容
-}
-
-func newLogMessage() interface{} {
-	return &logMessage{}
-}
-
 // 全局唯一Logger实例
 var defaultLogger *Logger
 
@@ -25,8 +15,7 @@ var defaultLogger *Logger
 type Logger struct {
 	wg           *sync.WaitGroup  // wg
 	once         *sync.Once       // once
-	pool         *sync.Pool       // logMessage 池子
-	closed       bool             // 是否关闭
+	closeTag     bool             // 是否关闭
 	closeChan    chan struct{}    // 关闭信号量
 	flushChan    chan struct{}    // flush buffer chan
 	msgChan      chan *logMessage // 接收日志数据的通道
@@ -40,8 +29,7 @@ func NewLogger(opts ...Option) (logger *Logger) {
 		defaultLogger = &Logger{
 			wg:        &sync.WaitGroup{},
 			once:      &sync.Once{},
-			pool:      &sync.Pool{New: newLogMessage},
-			closed:    false,
+			closeTag:  false,
 			closeChan: make(chan struct{}),
 			flushChan: make(chan struct{}),
 			config: &LogConfig{
@@ -71,7 +59,10 @@ func NewLogger(opts ...Option) (logger *Logger) {
 }
 
 func (log *Logger) Close() {
-	log.closed = true
+	if log.closeTag {
+		return
+	}
+	log.closeTag = true
 	close(log.msgChan)
 	close(log.flushChan)
 	close(log.closeChan)
@@ -174,15 +165,9 @@ func (log *Logger) run() {
 	}(log.wg)
 }
 
-func (log *Logger) releaseLogMessage(msg *logMessage) {
-	msg.level = _LevelBegin
-	msg.message = ""
-	log.pool.Put(msg)
-}
-
 // 将消息发送到日志通道
 func (log *Logger) log(level Level, message string) {
-	if log.closed || !level.valid() {
+	if log.closeTag || !level.valid() {
 		return
 	}
 	// 判断是否需要输出
@@ -232,7 +217,7 @@ func (log *Logger) splicingMessage(level Level, message string) (msg *logMessage
 		timeDesc    = time.Now().Format("2006/01/02 15:04:05.000000") // 时间
 	)
 
-	msg = log.pool.Get().(*logMessage)
+	msg = defaultPool.getLogMessage()
 	msg.level = level
 	msg.message = fmt.Sprintf("[%s] %s [%s] [%s:%d] %s\n", appName, levelPrefix, timeDesc, fileName, line, message)
 	return
@@ -277,7 +262,7 @@ func (log *Logger) write(msgData *logMessage) {
 			n, _ := cg.fd.WriteString(m.message)
 			cg.size += int64(n)
 		}
-		log.releaseLogMessage(m)
+		defaultPool.putMessage(m)
 	}
 }
 

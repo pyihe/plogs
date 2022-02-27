@@ -42,8 +42,6 @@ func (lc *levelConfig) init(root string) (err error) {
 	nowTime := time.Now()
 	lc.prefix = lc.level.prefix()
 	lc.filePath = filepath.Join(root, lc.level.subPath())
-	lc.cutTime = nowTime.Unix()
-	lc.size = 0
 	lc.fileName = "temp.log"
 
 	// 创建目录(如果不存在的话)
@@ -52,6 +50,16 @@ func (lc *levelConfig) init(root string) (err error) {
 	}
 	// 打开文件
 	lc.fd, err = os.OpenFile(filepath.Join(lc.filePath, lc.fileName), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	if err != nil {
+		return
+	}
+	// 这里需要考虑文件已经存在且包含内容
+	fileInfo, err := lc.fd.Stat()
+	if err != nil {
+		return
+	}
+	lc.size = fileInfo.Size()
+	lc.cutTime = nowTime.Unix()
 	return
 }
 
