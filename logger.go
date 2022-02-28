@@ -167,53 +167,6 @@ func (log *Logger) cutLoop() {
 	}
 }
 
-//func (log *Logger) run() {
-//	log.wg.Add(2)
-//	go func(wg *sync.WaitGroup) {
-//		ticker := time.NewTimer(log.config.flushDuration)
-//		defer ticker.Stop()
-//		for {
-//			select {
-//			case <-ticker.C:
-//				break
-//			case _, ok := <-log.flushChan:
-//				if ok {
-//					ticker.Stop()
-//					break
-//				}
-//			}
-//			select {
-//			case msg, ok := <-log.msgChan:
-//				log.write(msg)
-//				if !ok {
-//					wg.Done()
-//					return
-//				}
-//			default:
-//				break
-//			}
-//			ticker.Reset(log.config.flushDuration)
-//		}
-//	}(log.wg)
-//
-//	go func(wg *sync.WaitGroup) {
-//		ticker := time.NewTicker(defaultCutDuration)
-//		defer ticker.Stop()
-//		for {
-//			select {
-//			case <-ticker.C:
-//				log.cut()
-//				ticker.Reset(defaultCutDuration)
-//			case <-log.closeChan:
-//				wg.Done()
-//				return
-//			default:
-//				break
-//			}
-//		}
-//	}(log.wg)
-//}
-
 // 将消息发送到日志通道
 func (log *Logger) log(level Level, message string) {
 	if log.closeTag || !level.valid() {
@@ -308,8 +261,7 @@ func (log *Logger) write(msgData *logMessage) {
 		configs = log.levelConfigs.getConfig(levels...)
 		// 将message写入句柄
 		for _, cg := range configs {
-			n, _ := cg.fd.WriteString(m.message)
-			cg.size += int64(n)
+			_, _ = fmt.Fprintf(cg, "%s", m.message)
 		}
 		defaultPool.putMessage(m)
 	}
@@ -370,9 +322,7 @@ func (log *Logger) cut() {
 		if log.config.fileLimit > 0 && len(existFiles) > log.config.fileLimit {
 			sort.Sort(existFiles)
 			for i := log.config.fileLimit; i < len(existFiles); i++ {
-				if existFiles[i] != nil {
-					_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
-				}
+				_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
 			}
 		}
 	}

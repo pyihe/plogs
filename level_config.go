@@ -108,7 +108,7 @@ func (lc *levelConfig) reset() (err error) {
 	lc.size = 0
 
 	// 5. 重置fd
-	lc.fd, err = os.OpenFile(oldPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+	lc.fd, err = os.OpenFile(oldPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	return
 }
 
@@ -133,5 +133,14 @@ func (lc *levelConfig) rangeFile(maxTime int64, maxCount int) (validFiles logFil
 		}
 		return nil
 	})
+	return
+}
+
+func (lc *levelConfig) Write(b []byte) (n int, err error) {
+	if len(b) == 0 {
+		return
+	}
+	n, err = lc.fd.Write(b)
+	lc.size += int64(n)
 	return
 }
