@@ -360,14 +360,19 @@ func (log *Logger) cut() {
 			return
 		}
 
+		if log.config.fileMaxTime == 0 && log.config.fileLimit == 0 {
+			continue
+		}
 		// 判断文件数量或者存活时间是否超过限制
 		// 文件超过最长保存时间的直接删除
 		// 如果剩下的文件数量仍然超过设置的最大保存数量，则删除最旧的文件，保存fileLimit个文件
-		existFiles := config.rangeFile(log.config.fileMaxTime)
+		existFiles := config.rangeFile(log.config.fileMaxTime, log.config.fileLimit)
 		if log.config.fileLimit > 0 && len(existFiles) > log.config.fileLimit {
 			sort.Sort(existFiles)
 			for i := log.config.fileLimit; i < len(existFiles); i++ {
-				_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
+				if existFiles[i] != nil {
+					_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
+				}
 			}
 		}
 	}

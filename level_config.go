@@ -22,6 +22,15 @@ func (l logFiles) Swap(i, j int) {
 }
 
 func (l logFiles) Less(i, j int) bool {
+	if l[i] == nil && l[j] == nil {
+		return false
+	}
+	if l[i] == nil {
+		return false
+	}
+	if l[j] == nil {
+		return true
+	}
 	return l[i].ModTime().Unix() > l[j].ModTime().Unix()
 }
 
@@ -108,7 +117,7 @@ func (lc *levelConfig) close() {
 	_ = lc.fd.Close()
 }
 
-func (lc *levelConfig) rangeFile(maxTime int64) (validFiles logFiles) {
+func (lc *levelConfig) rangeFile(maxTime int64, maxCount int) (validFiles logFiles) {
 	_ = filepath.Walk(lc.filePath, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -119,7 +128,9 @@ func (lc *levelConfig) rangeFile(maxTime int64) (validFiles logFiles) {
 		if maxTime > 0 && time.Now().Unix()-info.ModTime().Unix() > maxTime {
 			return os.Remove(path)
 		}
-		validFiles = append(validFiles, info)
+		if maxCount > 0 {
+			validFiles = append(validFiles, info)
+		}
 		return nil
 	})
 	return

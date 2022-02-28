@@ -17,15 +17,15 @@ func main() {
 		plogs.WithLogPath("./logs"),
 		plogs.WithStdout(true),
 		plogs.WithWriteLevel(plogs.LevelInfo | plogs.LevelDebug | plogs.LevelWarning | plogs.LevelError | plogs.LevelFatal),
-		plogs.WithMaxTime(60 * 60),
-		plogs.WithMaxLimit(15),
+		plogs.WithMaxTime(60),
+		plogs.WithMaxLimit(5),
 	}
 
 	logger := plogs.NewLogger(opts...)
 	defer logger.Close()
 
 	now := time.Now()
-	for i := 1; i <= 100000; i++ {
+	for i := 1; i <= 500000; i++ {
 		//time.Sleep(500 * time.Millisecond)
 		plogs.Fatalf("hello, this is output by plogs!")
 		plogs.Errorf("hello, this is output by plogs!")
