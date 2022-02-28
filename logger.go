@@ -3,7 +3,9 @@ package plogs
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"sort"
 	"sync"
 	"time"
 )
@@ -53,7 +55,8 @@ func NewLogger(opts ...Option) (logger *Logger) {
 			panic(err)
 		}
 		// 运行
-		defaultLogger.run()
+		go defaultLogger.readLoop()
+		go defaultLogger.cutLoop()
 	})
 	return defaultLogger
 }
@@ -113,57 +116,103 @@ func (log *Logger) init() (err error) {
 }
 
 // 这里开启两个协程，一个负责读取并记录日志，另一个负责切割日志
-func (log *Logger) run() {
-	log.wg.Add(2)
-	go func(wg *sync.WaitGroup) {
-		ticker := time.NewTimer(log.config.flushDuration)
-		defer ticker.Stop()
-		for {
-			//第一个select，固定周期进行flush，或者周期内通道缓冲达到了容量的90%时进行flush
-			//收到flush信号量时需要停止ticker
-			//第二个select，收到日志即write，没有日志则进入下一个flush周期
-			//每个周期完毕，需要重置ticker
-			//日志消息通道关闭时直接return，结束协程
-			select {
-			case <-ticker.C:
-				break
-			case _, ok := <-log.flushChan:
-				if ok {
-					ticker.Stop()
-					break
-				}
-			}
-			select {
-			case msg, ok := <-log.msgChan:
-				log.write(msg)
-				if !ok {
-					wg.Done()
-					return
-				}
-			default:
+func (log *Logger) readLoop() {
+	log.wg.Add(1)
+	ticker := time.NewTimer(log.config.flushDuration)
+	defer ticker.Stop()
+	for {
+		//第一个select，固定周期进行flush，或者周期内通道缓冲达到了容量的90%时进行flush
+		//收到flush信号量时需要停止ticker
+		//第二个select，收到日志即write，没有日志则进入下一个flush周期
+		//每个周期完毕，需要重置ticker
+		//日志消息通道关闭时直接return，结束协程
+		select {
+		case <-ticker.C:
+			break
+		case _, ok := <-log.flushChan:
+			if ok {
+				ticker.Stop()
 				break
 			}
-			ticker.Reset(log.config.flushDuration)
 		}
-	}(log.wg)
-
-	go func(wg *sync.WaitGroup) {
-		ticker := time.NewTicker(defaultCutDuration)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				log.cut()
-				ticker.Reset(defaultCutDuration)
-			case <-log.closeChan:
-				wg.Done()
+		select {
+		case msg, ok := <-log.msgChan:
+			log.write(msg)
+			if !ok {
+				log.wg.Done()
 				return
-			default:
-				break
 			}
+		default:
+			break
 		}
-	}(log.wg)
+		ticker.Reset(log.config.flushDuration)
+	}
 }
+
+func (log *Logger) cutLoop() {
+	log.wg.Add(1)
+	ticker := time.NewTicker(defaultCutDuration)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			log.cut()
+			ticker.Reset(defaultCutDuration)
+		case <-log.closeChan:
+			log.wg.Done()
+			return
+		default:
+			break
+		}
+	}
+}
+
+//func (log *Logger) run() {
+//	log.wg.Add(2)
+//	go func(wg *sync.WaitGroup) {
+//		ticker := time.NewTimer(log.config.flushDuration)
+//		defer ticker.Stop()
+//		for {
+//			select {
+//			case <-ticker.C:
+//				break
+//			case _, ok := <-log.flushChan:
+//				if ok {
+//					ticker.Stop()
+//					break
+//				}
+//			}
+//			select {
+//			case msg, ok := <-log.msgChan:
+//				log.write(msg)
+//				if !ok {
+//					wg.Done()
+//					return
+//				}
+//			default:
+//				break
+//			}
+//			ticker.Reset(log.config.flushDuration)
+//		}
+//	}(log.wg)
+//
+//	go func(wg *sync.WaitGroup) {
+//		ticker := time.NewTicker(defaultCutDuration)
+//		defer ticker.Stop()
+//		for {
+//			select {
+//			case <-ticker.C:
+//				log.cut()
+//				ticker.Reset(defaultCutDuration)
+//			case <-log.closeChan:
+//				wg.Done()
+//				return
+//			default:
+//				break
+//			}
+//		}
+//	}(log.wg)
+//}
 
 // 将消息发送到日志通道
 func (log *Logger) log(level Level, message string) {
@@ -290,7 +339,7 @@ func (log *Logger) cut() {
 				return
 			}
 		case CutPer10M: // 每10M切割一次
-			if config.size < 10*1024*1024 {
+			if config.size < 5*1024*1024 {
 				return
 			}
 		case CutPer60M: // 每60M切割一次
@@ -309,6 +358,17 @@ func (log *Logger) cut() {
 		// 可以切割
 		if err := config.reset(); err != nil {
 			return
+		}
+
+		// 判断文件数量或者存活时间是否超过限制
+		// 文件超过最长保存时间的直接删除
+		// 如果剩下的文件数量仍然超过设置的最大保存数量，则删除最旧的文件，保存fileLimit个文件
+		existFiles := config.rangeFile(log.config.fileMaxTime)
+		if log.config.fileLimit > 0 && len(existFiles) > log.config.fileLimit {
+			sort.Sort(existFiles)
+			for i := log.config.fileLimit; i < len(existFiles); i++ {
+				_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
+			}
 		}
 	}
 }

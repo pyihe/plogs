@@ -2,6 +2,7 @@ package plogs
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -9,6 +10,20 @@ import (
 
 	"github.com/pyihe/go-pkg/files"
 )
+
+type logFiles []fs.FileInfo
+
+func (l logFiles) Len() int {
+	return len(l)
+}
+
+func (l logFiles) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
+func (l logFiles) Less(i, j int) bool {
+	return l[i].ModTime().Unix() > l[j].ModTime().Unix()
+}
 
 // 所有可输出级别对应的配置
 type levelList struct {
@@ -30,11 +45,11 @@ func (ll *levelList) getConfig(levels ...Level) (configs []*levelConfig) {
 // 每个Level对应的配置
 type levelConfig struct {
 	level    Level    // 日志级别
-	prefix   string   // 日志前缀
-	filePath string   // 日志文件存放路径
-	fileName string   // 文件名
 	cutTime  int64    // 文件切割时间
 	size     int64    // 写入的大小
+	filePath string   // 日志文件存放路径
+	fileName string   // 文件名
+	prefix   string   // 日志前缀
 	fd       *os.File // 文件句柄
 }
 
@@ -91,4 +106,21 @@ func (lc *levelConfig) reset() (err error) {
 func (lc *levelConfig) close() {
 	_ = lc.fd.Sync()
 	_ = lc.fd.Close()
+}
+
+func (lc *levelConfig) rangeFile(maxTime int64) (validFiles logFiles) {
+	_ = filepath.Walk(lc.filePath, func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if filepath.Ext(path) != ".log" || info.Name() == "temp.log" {
+			return nil
+		}
+		if maxTime > 0 && time.Now().Unix()-info.ModTime().Unix() > maxTime {
+			return os.Remove(path)
+		}
+		validFiles = append(validFiles, info)
+		return nil
+	})
+	return
 }
