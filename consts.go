@@ -8,7 +8,8 @@ const (
 
 const (
 	_LevelBegin        = iota            // begin
-	LevelFatal   Level = 1 << (iota - 1) // 致命错误
+	LevelPanic   Level = 1 << (iota - 1) // panic
+	LevelFatal                           // 致命错误, 程序会退出
 	LevelError                           // 错误
 	LevelWarning                         // 警告
 	LevelInfo                            // 追踪
@@ -57,6 +58,8 @@ func (l Level) valid() bool {
 // 每个级别的日志对应的prefix
 func (l Level) prefix() (prefix string) {
 	switch l {
+	case LevelPanic:
+		prefix = "[Panic]"
 	case LevelFatal:
 		prefix = "[Fatal]"
 	case LevelError:
@@ -74,6 +77,8 @@ func (l Level) prefix() (prefix string) {
 // 需要区分级别存放日志信息时，用于获取每个级别日志存放的子目录
 func (l Level) subPath() (suffix string) {
 	switch l {
+	case LevelPanic:
+		suffix = "panics"
 	case LevelFatal:
 		suffix = "fatals"
 	case LevelError:
@@ -92,6 +97,8 @@ func (l Level) subPath() (suffix string) {
 
 func (l Level) colorCode() (code int) {
 	switch l {
+	case LevelPanic: // 红色
+		code = 31
 	case LevelFatal: // 红色
 		code = 31
 	case LevelError: // 紫红色
@@ -99,9 +106,8 @@ func (l Level) colorCode() (code int) {
 	case LevelWarning: // 黄色
 		code = 33
 	case LevelInfo: // 绿色
-		code = 32
-	case LevelDebug: // 蓝色
 		code = 34
+	case LevelDebug: // 白色
 	}
 	return
 }

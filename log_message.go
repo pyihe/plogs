@@ -32,5 +32,4 @@ func (p *messagePool) putMessage(msg *logMessage) {
 		msg.message = ""
 		p.pool.Put(msg)
 	}
-
 }

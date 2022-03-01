@@ -1,13 +1,27 @@
 package plogs
 
+func Panic(args ...interface{}) {
+	message := getMessage("", args)
+	defaultLogger.log(LevelPanic, message)
+	defaultLogger.panic(message)
+}
+
+func Panicf(template string, args ...interface{}) {
+	message := getMessage(template, args)
+	defaultLogger.log(LevelPanic, message)
+	defaultLogger.panic(message)
+}
+
 func Fatal(args ...interface{}) {
 	message := getMessage("", args)
 	defaultLogger.log(LevelFatal, message)
+	defaultLogger.exit()
 }
 
 func Fatalf(template string, args ...interface{}) {
 	message := getMessage(template, args)
 	defaultLogger.log(LevelFatal, message)
+	defaultLogger.exit()
 }
 
 func Error(args ...interface{}) {

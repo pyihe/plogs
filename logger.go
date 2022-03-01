@@ -3,11 +3,12 @@ package plogs
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
-	"sort"
+	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/pyihe/go-pkg/bytes"
 )
 
 // 全局唯一Logger实例
@@ -55,24 +56,9 @@ func NewLogger(opts ...Option) (logger *Logger) {
 			panic(err)
 		}
 		// 运行
-		go defaultLogger.readLoop()
-		go defaultLogger.cutLoop()
+		defaultLogger.run()
 	})
 	return defaultLogger
-}
-
-func (log *Logger) Close() {
-	if log.closeTag {
-		return
-	}
-	log.closeTag = true
-	close(log.msgChan)
-	close(log.flushChan)
-	close(log.closeChan)
-	log.wg.Wait()
-	for _, config := range log.levelConfigs.levels {
-		config.close()
-	}
 }
 
 func (log *Logger) init() (err error) {
@@ -99,7 +85,7 @@ func (log *Logger) init() (err error) {
 	// 如果需要根据级别输出到不同的文件
 	if writeOption != WriteByMerged {
 		// 初始化每个需要输出的日志级别的配置
-		allLevels := []Level{LevelFatal, LevelError, LevelWarning, LevelInfo, LevelDebug}
+		allLevels := []Level{LevelPanic, LevelFatal, LevelError, LevelWarning, LevelInfo, LevelDebug}
 		for _, lv := range allLevels {
 			if lv&writeLevel == lv {
 				c := &levelConfig{
@@ -113,6 +99,11 @@ func (log *Logger) init() (err error) {
 		}
 	}
 	return
+}
+
+func (log *Logger) run() {
+	go log.readLoop()
+	go log.cutLoop()
 }
 
 // 这里开启两个协程，一个负责读取并记录日志，另一个负责切割日志
@@ -165,6 +156,38 @@ func (log *Logger) cutLoop() {
 			break
 		}
 	}
+}
+
+func (log *Logger) panic(message string) {
+	if (log.config.writeLevel & LevelPanic) != LevelPanic {
+		return
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			mu := log.levelConfigs.mu
+			msg := bytes.String(debug.Stack())
+			mu.Lock()
+			defer mu.Unlock()
+
+			c0, c1 := log.getLevelConfig(LevelPanic), log.getLevelConfig(_LevelEnd)
+			_, _ = fmt.Fprint(c0, fmt.Sprintf("\n%s\n", msg))
+			_, _ = fmt.Fprint(c1, fmt.Sprintf("\n%s\n", msg))
+			if log.config.stdout {
+				_, _ = fmt.Fprintf(os.Stdout, "\n%c[%dm%s%c[0m\n", 0x1B, LevelPanic.colorCode(), msg, 0x1B)
+			}
+		}
+	}()
+
+	panic(message)
+}
+
+func (log *Logger) exit() {
+	log.Close()
+	os.Exit(1)
+}
+
+func (log *Logger) getLevelConfig(level Level) *levelConfig {
+	return log.levelConfigs.getConfig(level)
 }
 
 // 将消息发送到日志通道
@@ -248,21 +271,10 @@ func (log *Logger) write(msgData *logMessage) {
 	defer mu.Unlock()
 
 	for _, m := range msgs {
-		var levels []Level
-		var configs []*levelConfig
-		switch log.config.writeOption {
-		case WriteByLevel:
-			levels = append(levels, m.level)
-		case WriteByMerged:
-			levels = append(levels, _LevelEnd)
-		case WriteByAll:
-			levels = append(levels, _LevelEnd, m.level)
-		}
-		configs = log.levelConfigs.getConfig(levels...)
-		// 将message写入句柄
-		for _, cg := range configs {
-			_, _ = fmt.Fprintf(cg, "%s", m.message)
-		}
+		c0, c1 := log.getLevelConfig(m.level), log.getLevelConfig(_LevelEnd)
+		_, _ = fmt.Fprint(c0, m.message)
+		_, _ = fmt.Fprint(c1, m.message)
+		// 回收logMessage
 		defaultPool.putMessage(m)
 	}
 }
@@ -280,31 +292,31 @@ func (log *Logger) cut() {
 		switch log.config.cutOption {
 		case CutHourly: // 每小时切割一次
 			if unix-config.cutTime < 60*60 {
-				return
+				continue
 			}
 		case CutHalfAnHour: // 半小时切割一次
 			if unix-config.cutTime < 30*60 {
-				return
+				continue
 			}
 		case CutTenMin: // 10 分钟切割一次
 			if unix-config.cutTime < 10*60 {
-				return
+				continue
 			}
 		case CutPer10M: // 每10M切割一次
 			if config.size < 10*1024*1024 {
-				return
+				continue
 			}
 		case CutPer60M: // 每60M切割一次
 			if config.size < 60*1024*1024 {
-				return
+				continue
 			}
 		case CutPer100M: // 每100M切割一次
 			if config.size < 100*1024*1024 {
-				return
+				continue
 			}
 		default: // 默认每天切割
 			if unix-config.cutTime < 24*60*60 {
-				return
+				continue
 			}
 		}
 		// 可以切割
@@ -312,19 +324,24 @@ func (log *Logger) cut() {
 			return
 		}
 
-		if log.config.fileMaxTime == 0 && log.config.fileLimit == 0 {
-			continue
+		if log.config.fileMaxTime > 0 {
+			// 判断文件保存时间是否超过限制, 文件超过最长保存时间的直接删除
+			config.rangeFile(log.config.fileMaxTime)
 		}
-		// 判断文件数量或者存活时间是否超过限制
-		// 文件超过最长保存时间的直接删除
-		// 如果剩下的文件数量仍然超过设置的最大保存数量，则删除最旧的文件，保存fileLimit个文件
-		existFiles := config.rangeFile(log.config.fileMaxTime, log.config.fileLimit)
-		if log.config.fileLimit > 0 && len(existFiles) > log.config.fileLimit {
-			sort.Sort(existFiles)
-			for i := log.config.fileLimit; i < len(existFiles); i++ {
-				_ = os.Remove(filepath.Join(config.filePath, existFiles[i].Name()))
-			}
-		}
+	}
+}
+
+func (log *Logger) Close() {
+	if log.closeTag {
+		return
+	}
+	log.closeTag = true
+	close(log.msgChan)
+	close(log.flushChan)
+	close(log.closeChan)
+	log.wg.Wait()
+	for _, config := range log.levelConfigs.levels {
+		config.close()
 	}
 }
 

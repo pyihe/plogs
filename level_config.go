@@ -40,12 +40,11 @@ type levelList struct {
 	levels []*levelConfig
 }
 
-func (ll *levelList) getConfig(levels ...Level) (configs []*levelConfig) {
-	for _, l := range levels {
-		for _, c := range ll.levels {
-			if c.level == l {
-				configs = append(configs, c)
-			}
+func (ll *levelList) getConfig(level Level) (config *levelConfig) {
+	for _, c := range ll.levels {
+		if c.level == level {
+			config = c
+			break
 		}
 	}
 	return
@@ -117,7 +116,7 @@ func (lc *levelConfig) close() {
 	_ = lc.fd.Close()
 }
 
-func (lc *levelConfig) rangeFile(maxTime int64, maxCount int) (validFiles logFiles) {
+func (lc *levelConfig) rangeFile(maxTime int64) {
 	_ = filepath.Walk(lc.filePath, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -128,15 +127,14 @@ func (lc *levelConfig) rangeFile(maxTime int64, maxCount int) (validFiles logFil
 		if maxTime > 0 && time.Now().Unix()-info.ModTime().Unix() > maxTime {
 			return os.Remove(path)
 		}
-		if maxCount > 0 {
-			validFiles = append(validFiles, info)
-		}
 		return nil
 	})
-	return
 }
 
 func (lc *levelConfig) Write(b []byte) (n int, err error) {
+	if lc == nil {
+		return
+	}
 	if len(b) == 0 {
 		return
 	}

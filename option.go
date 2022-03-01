@@ -11,7 +11,6 @@ type LogConfig struct {
 	writeOption   WriteOption   // 日志记录方式
 	cutOption     CutOption     // 日志切割方式
 	writeLevel    Level         // 需要记录的日志级别
-	fileLimit     int           // 文件数量限制
 	fileMaxTime   int64         // 单个文件最长保存期限
 	flushDuration time.Duration // 日志通道缓冲区flush周期, 单位毫秒
 	appName       string        // 日志来自哪个应用
@@ -91,13 +90,6 @@ func WithFlushDuration(duration time.Duration) Option {
 			duration = 5000
 		}
 		c.flushDuration = duration
-	}
-}
-
-// WithMaxLimit 设置日志文件最大保存数量
-func WithMaxLimit(n int) Option {
-	return func(c *LogConfig) {
-		c.fileLimit = n
 	}
 }
 
