@@ -173,7 +173,7 @@ func (log *Logger) panic(message string) {
 			_, _ = fmt.Fprint(c0, fmt.Sprintf("\n%s\n", msg))
 			_, _ = fmt.Fprint(c1, fmt.Sprintf("\n%s\n", msg))
 			if log.config.stdout {
-				_, _ = fmt.Fprintf(os.Stdout, "\n%c[%dm%s%c[0m\n", 0x1B, LevelPanic.colorCode(), msg, 0x1B)
+				_, _ = fmt.Fprintf(os.Stdout, "%c[%dm%s%c[0m\n", 0x1B, LevelPanic.colorCode(), msg, 0x1B)
 			}
 		}
 	}()
@@ -182,6 +182,9 @@ func (log *Logger) panic(message string) {
 }
 
 func (log *Logger) exit() {
+	if (log.config.writeLevel & LevelFatal) != LevelFatal {
+		return
+	}
 	log.Close()
 	os.Exit(1)
 }
