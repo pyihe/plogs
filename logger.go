@@ -152,8 +152,6 @@ func (log *Logger) cutLoop() {
 		case <-log.closeChan:
 			log.wg.Done()
 			return
-		default:
-			break
 		}
 	}
 }
