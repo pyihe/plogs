@@ -3,7 +3,8 @@ package plogs
 import "time"
 
 const (
-	defaultCutDuration = 1 * time.Second
+	defaultCutDuration = 1 * time.Second  // 默认日志切割周期
+	defaultFileSize    = 10 * 1024 * 1024 // 默认文件大小60MB
 )
 
 const (

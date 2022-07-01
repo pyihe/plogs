@@ -292,15 +292,15 @@ func (log *Logger) cut() {
 		// 判断是否符合切割条件
 		switch log.config.cutOption {
 		case CutHourly: // 每小时切割一次
-			if unix-config.cutTime < 60*60 {
+			if unix-config.cutTime < 60*60 || config.size < defaultFileSize {
 				continue
 			}
 		case CutHalfAnHour: // 半小时切割一次
-			if unix-config.cutTime < 30*60 {
+			if unix-config.cutTime < 30*60 || config.size < defaultFileSize {
 				continue
 			}
 		case CutTenMin: // 10 分钟切割一次
-			if unix-config.cutTime < 10*60 {
+			if unix-config.cutTime < 10*60 || config.size < defaultFileSize {
 				continue
 			}
 		case CutPer10M: // 每10M切割一次
