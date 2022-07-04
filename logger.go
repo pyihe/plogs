@@ -245,7 +245,7 @@ func (log *Logger) splicingMessage(level Level, message string) (msg *logMessage
 
 	msg = defaultPool.getLogMessage()
 	msg.level = level
-	msg.message = fmt.Sprintf("[%s] %s [%s] [%s:%d] %s\n", appName, levelPrefix, timeDesc, fileName, line, message)
+	msg.message = fmt.Sprintf("[%s] %s [%s] [%s:%d] %s", appName, levelPrefix, timeDesc, fileName, line, message)
 	return
 }
 
