@@ -1,129 +1,68 @@
 package plogs
 
-func (log *Logger) Panic(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelPanic, message)
-	log.panic(message)
-}
-
-func (log *Logger) Panicf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	log.log(LevelPanic, message)
-	log.panic(message)
-}
-
-func (log *Logger) Fatal(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelFatal, message)
-	log.exit()
-}
-
-func (log *Logger) Fatalf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	log.log(LevelFatal, message)
-	log.exit()
-}
-
-func (log *Logger) Error(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelError, message)
-}
-
-func (log *Logger) Errorf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	log.log(LevelError, message)
-}
-
-func (log *Logger) Warn(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelWarning, message)
-}
-
-func (log *Logger) Warnf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	log.log(LevelWarning, message)
-}
-
-func (log *Logger) Info(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelInfo, message)
-}
-
-func (log *Logger) Infof(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelInfo, message)
-}
-
-func (log *Logger) Debug(args ...interface{}) {
-	message := getMessage("", args)
-	log.log(LevelDebug, message)
-}
-
-func (log *Logger) Debugf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	log.log(LevelDebug, message)
-}
+import "fmt"
 
 func Panic(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelPanic, message)
-	defaultLogger.panic(message)
+	defaultLogger.panic(args...)
 }
 
 func Panicf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelPanic, message)
-	defaultLogger.panic(message)
+	defaultLogger.panicf(template, args...)
 }
 
 func Fatal(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelFatal, message)
-	defaultLogger.exit()
+	defaultLogger.fatal(args...)
 }
 
 func Fatalf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelFatal, message)
-	defaultLogger.exit()
+	defaultLogger.fatalf(template, args...)
 }
 
 func Error(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelError, message)
+	defaultLogger.error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelError, message)
+	defaultLogger.errorf(template, args...)
 }
 
 func Warn(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelWarning, message)
+	defaultLogger.Warn(args...)
 }
 
 func Warnf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelWarning, message)
+	defaultLogger.Warnf(template, args...)
 }
 
 func Info(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelInfo, message)
+	defaultLogger.Info(args...)
 }
 
 func Infof(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelInfo, message)
+	defaultLogger.Infof(template, args...)
 }
 
 func Debug(args ...interface{}) {
-	message := getMessage("", args)
-	defaultLogger.log(LevelDebug, message)
+	defaultLogger.Debug(args...)
 }
 
 func Debugf(template string, args ...interface{}) {
-	message := getMessage(template, args)
-	defaultLogger.log(LevelDebug, message)
+	defaultLogger.Debugf(template, args...)
+}
+
+func getMessage(template string, fmtArgs []interface{}) string {
+	if len(fmtArgs) == 0 {
+		return template
+	}
+
+	if template != "" {
+		return fmt.Sprintf(template, fmtArgs...)
+	}
+
+	if len(fmtArgs) == 1 {
+		if str, ok := fmtArgs[0].(string); ok {
+			return str
+		}
+	}
+	return fmt.Sprint(fmtArgs...)
 }
