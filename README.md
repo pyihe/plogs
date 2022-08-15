@@ -16,9 +16,9 @@
 package main
 
 import (
-	"time"
+    "time"
 
-	"github.com/pyihe/plogs"
+    "github.com/pyihe/plogs"
 )
 
 func main() {
