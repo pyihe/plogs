@@ -1,8 +1,12 @@
 package plogs
 
-import "time"
+import (
+	"time"
 
-type Option func(c *LogConfig)
+	"github.com/pyihe/plogs/internal"
+)
+
+type Option func(c *Logger)
 
 // LogConfig 配置项
 type LogConfig struct {
@@ -17,53 +21,62 @@ type LogConfig struct {
 
 // WithStdout 设置是否同步输出到标准输出
 func WithStdout(b bool) Option {
-	return func(c *LogConfig) {
-		c.stdout = b
+	return func(c *Logger) {
+		c.config.stdout = b
 	}
 }
 
 // WithFileOption 设置写文件选项
 func WithFileOption(opt FileOption) Option {
-	return func(c *LogConfig) {
+	return func(c *Logger) {
 		if opt.valid() {
-			c.fileOption = opt
+			c.config.fileOption = opt
 		}
 	}
 }
 
 // WithLogLevel 日志记录级别: [ LevelFatal | LevelFatal | LevelError | LevelWarn | LevelInfo | LevelDebug ]
 func WithLogLevel(level Level) Option {
-	return func(c *LogConfig) {
-		c.logLevel = level
+	return func(c *Logger) {
+		c.config.logLevel = level
 	}
 }
 
 // WithMaxAge 设置日志文件保存最长时间
 func WithMaxAge(t time.Duration) Option {
-	return func(c *LogConfig) {
-		c.maxAge = t
+	return func(c *Logger) {
+		c.config.maxAge = t
 	}
 }
 
 // WithMaxSize 设置日志文件保存上限
 func WithMaxSize(size int64) Option {
-	return func(c *LogConfig) {
-		c.maxSize = size
+	return func(c *Logger) {
+		c.config.maxSize = size
 	}
 }
 
 // WithName 设置app名称
 func WithName(name string) Option {
-	return func(c *LogConfig) {
-		c.name = name
+	return func(c *Logger) {
+		c.config.name = name
 	}
 }
 
 // WithLogPath 设置日志文件存放目录(如果区分级别存放日志，将会在filepath下创建对应级别的目录用于区分)
 func WithLogPath(filepath string) Option {
-	return func(c *LogConfig) {
+	return func(c *Logger) {
 		if filepath != "" {
-			c.logPath = filepath
+			c.config.logPath = filepath
+		}
+	}
+}
+
+// WithWriter 添加自定义Writer
+func WithWriter(writer ...internal.LogWriter) Option {
+	return func(c *Logger) {
+		for _, w := range writer {
+			c.writer.AddWriter(w)
 		}
 	}
 }

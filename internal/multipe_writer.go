@@ -1,60 +1,64 @@
 package internal
 
 import (
-	"context"
-	"time"
-
-	"github.com/pyihe/go-pkg/syncs"
+	"github.com/pyihe/go-pkg/errors"
+	"github.com/pyihe/go-pkg/strings"
 )
 
-type logWriter interface {
-	write(b []byte) (int, error)
-	start()
-	stop()
+type LogWriter interface {
+	Write(b []byte) (int, error)
+	Name() string
+	Start()
+	Stop()
 }
 
 type MultipeWriters struct {
-	wg      syncs.WgWrapper   // waiter
-	writers map[int]logWriter // writers
+	writers map[string]LogWriter // writers
 }
 
 func NewMultipeWriters() *MultipeWriters {
 	mw := &MultipeWriters{
-		wg:      syncs.WgWrapper{},
-		writers: make(map[int]logWriter),
+		writers: make(map[string]LogWriter),
 	}
 	return mw
 }
 
-func (m *MultipeWriters) AddFileWriter(ctx context.Context, k int, filePath, fileName string, maxSize int64, maxAge time.Duration) {
-	writer := newFileWriter(ctx, &m.wg, filePath, fileName, maxSize, maxAge)
-	m.writers[k] = writer
-}
-
-func (m *MultipeWriters) AddStdWriter(ctx context.Context, k int) {
-	m.writers[k] = newStdin(ctx, &m.wg)
-}
-
-func (m *MultipeWriters) Write(k int, b []byte) {
-	writer := m.writers[k]
-	if writer != nil {
-		writer.write(b)
+func (m *MultipeWriters) AddWriter(writer LogWriter) {
+	if writer == nil {
+		return
 	}
+	m.writers[strings.ToLower(writer.Name())] = writer
+	return
+}
+
+func (m *MultipeWriters) Write(b []byte) (n int, err error) {
+	for _, w := range m.writers {
+		n, err = w.Write(b)
+	}
+	return
+}
+
+func (m *MultipeWriters) WriteOne(name string, b []byte) (n int, err error) {
+	writer := m.writers[strings.ToLower(name)]
+	if writer != nil {
+		return writer.Write(b)
+	}
+	return 0, errors.New("not found writer")
 }
 
 func (m *MultipeWriters) Start() {
 	for _, w := range m.writers {
-		w.start()
+		w.Start()
 	}
 }
 
 func (m *MultipeWriters) Stop() {
 	for _, w := range m.writers {
-		w.stop()
+		w.Stop()
 	}
-	m.wg.Wait()
 }
 
-func (m *MultipeWriters) Count() int {
-	return len(m.writers)
+func (m *MultipeWriters) Count() (n int) {
+	n = len(m.writers)
+	return
 }

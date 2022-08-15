@@ -52,7 +52,7 @@ func (l Level) prefix() (prefix string) {
 }
 
 // 需要区分级别存放日志信息时，用于获取每个级别日志存放的子目录
-func (l Level) subPath() (suffix string) {
+func subPath(l Level) (suffix string) {
 	switch l {
 	case LevelPanic:
 		suffix = "panics"
@@ -68,6 +68,8 @@ func (l Level) subPath() (suffix string) {
 		suffix = "debugs"
 	case _LevelEnd:
 		suffix = "merged"
+	case _LevelBegin:
+		suffix = "begins"
 	}
 	return
 }

@@ -1,29 +1,27 @@
 package plogs
 
-import "fmt"
-
 func Panic(args ...interface{}) {
-	defaultLogger.panic(args...)
+	defaultLogger.Panic(args...)
 }
 
 func Panicf(template string, args ...interface{}) {
-	defaultLogger.panicf(template, args...)
+	defaultLogger.Panicf(template, args...)
 }
 
 func Fatal(args ...interface{}) {
-	defaultLogger.fatal(args...)
+	defaultLogger.Fatal(args...)
 }
 
 func Fatalf(template string, args ...interface{}) {
-	defaultLogger.fatalf(template, args...)
+	defaultLogger.Fatalf(template, args...)
 }
 
 func Error(args ...interface{}) {
-	defaultLogger.error(args...)
+	defaultLogger.Error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	defaultLogger.errorf(template, args...)
+	defaultLogger.Errorf(template, args...)
 }
 
 func Warn(args ...interface{}) {
@@ -48,21 +46,4 @@ func Debug(args ...interface{}) {
 
 func Debugf(template string, args ...interface{}) {
 	defaultLogger.Debugf(template, args...)
-}
-
-func getMessage(template string, fmtArgs []interface{}) string {
-	if len(fmtArgs) == 0 {
-		return template
-	}
-
-	if template != "" {
-		return fmt.Sprintf(template, fmtArgs...)
-	}
-
-	if len(fmtArgs) == 1 {
-		if str, ok := fmtArgs[0].(string); ok {
-			return str
-		}
-	}
-	return fmt.Sprint(fmtArgs...)
 }

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	bufferSize = 1024
+	bufferSize = 1 << 10
 )
 
 type fileWriter struct {
@@ -30,7 +30,7 @@ type fileWriter struct {
 	writeBuffer chan []byte      // 写缓存
 }
 
-func newFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName string, maxSize int64, maxAge time.Duration) *fileWriter {
+func NewFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName string, maxSize int64, maxAge time.Duration) *fileWriter {
 	if err := pkg.MakeDir(filePath); err != nil {
 		panic(err)
 	}
@@ -58,7 +58,11 @@ func newFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName 
 	}
 }
 
-func (fw *fileWriter) write(b []byte) (n int, err error) {
+func (fw *fileWriter) Name() string {
+	return "file"
+}
+
+func (fw *fileWriter) Write(b []byte) (n int, err error) {
 	// 如果已经关闭
 	if atomic.LoadInt32(&fw.closed) == 1 {
 		return
@@ -67,7 +71,7 @@ func (fw *fileWriter) write(b []byte) (n int, err error) {
 	return len(b), nil
 }
 
-func (fw *fileWriter) stop() {
+func (fw *fileWriter) Stop() {
 	if atomic.LoadInt32(&fw.closed) == 1 {
 		return
 	}
@@ -77,7 +81,7 @@ func (fw *fileWriter) stop() {
 	close(fw.writeBuffer)
 }
 
-func (fw *fileWriter) start() {
+func (fw *fileWriter) Start() {
 	fw.wg.Wrap(func() {
 		var ticker *time.Ticker
 		var duration = fw.checkLife()
@@ -112,20 +116,18 @@ func (fw *fileWriter) start() {
 
 // 收到Done信号时, 需要将通道内剩余的日志打入文件中
 func (fw *fileWriter) clean() {
-	count := len(fw.writeBuffer)
-	if count == 0 {
-		return
-	}
-	remainMsg := make([][]byte, count)
-	index := 0
-	for msg := range fw.writeBuffer {
-		remainMsg[index] = msg
-		index++
-		if index == count {
-			break
+	if count := len(fw.writeBuffer); count > 0 {
+		remainMsg := make([][]byte, count)
+		index := 0
+		for msg := range fw.writeBuffer {
+			remainMsg[index] = msg
+			index++
+			if index == count {
+				break
+			}
 		}
+		fw.writeToFile(remainMsg...)
 	}
-	fw.writeToFile(remainMsg...)
 
 	if fw.maxSize > 0 {
 		fw.rotate()
