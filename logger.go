@@ -66,6 +66,7 @@ func (l *Logger) Close() {
 	atomic.StoreInt32(&l.closed, 1)
 	l.cancel()
 	l.writer.Stop()
+	l.waiter.Wait()
 }
 
 func (l *Logger) recover(message string) {
@@ -101,13 +102,6 @@ func (l *Logger) write(level Level, message []byte) {
 }
 
 func (l *Logger) log(level Level, message string) {
-	if atomic.LoadInt32(&l.closed) == 1 || !level.valid() {
-		return
-	}
-	if l.outputLevel(level) == false {
-		return
-	}
-
 	_, fileName, line, ok := runtime.Caller(3)
 	if !ok {
 		return
@@ -154,8 +148,17 @@ func (l *Logger) log(level Level, message string) {
 	return
 }
 
-func (l *Logger) outputLevel(level Level) bool {
-	return (l.config.logLevel & level) == level
+func (l *Logger) canOutput(level Level) bool {
+	if atomic.LoadInt32(&l.closed) == 1 {
+		return false
+	}
+	if !level.valid() {
+		return false
+	}
+	if (l.config.logLevel & level) != level {
+		return false
+	}
+	return true
 }
 
 func (l *Logger) start() {
@@ -174,65 +177,99 @@ func (l *Logger) exit() {
 }
 
 func (l *Logger) Panic(args ...interface{}) {
-	m := pkg.GetMessage("", args)
-	l.log(LevelPanic, m)
-	l.recover(m)
+	if l.canOutput(LevelPanic) {
+		m := pkg.GetMessage("", args)
+		l.log(LevelPanic, m)
+		l.recover(m)
+	}
 }
 
 func (l *Logger) Panicf(template string, args ...interface{}) {
-	m := pkg.GetMessage(template, args)
-	l.log(LevelPanic, m)
-	l.recover(m)
+	if l.canOutput(LevelPanic) {
+		m := pkg.GetMessage(template, args)
+		l.log(LevelPanic, m)
+		l.recover(m)
+	}
 }
 
 func (l *Logger) Fatal(args ...interface{}) {
+	if !l.canOutput(LevelFatal) {
+		return
+	}
 	m := pkg.GetMessage("", args)
 	l.log(LevelFatal, m)
 	l.exit()
 }
 
 func (l *Logger) Fatalf(template string, args ...interface{}) {
+	if !l.canOutput(LevelFatal) {
+		return
+	}
 	m := pkg.GetMessage(template, args)
 	l.log(LevelFatal, m)
 	l.exit()
 }
 
 func (l *Logger) Error(args ...interface{}) {
+	if !l.canOutput(LevelError) {
+		return
+	}
 	m := pkg.GetMessage("", args)
 	l.log(LevelError, m)
 }
 
 func (l *Logger) Errorf(template string, args ...interface{}) {
+	if !l.canOutput(LevelError) {
+		return
+	}
 	m := pkg.GetMessage(template, args)
 	l.log(LevelError, m)
 }
 
 func (l *Logger) Warn(args ...interface{}) {
+	if !l.canOutput(LevelWarn) {
+		return
+	}
 	m := pkg.GetMessage("", args)
 	l.log(LevelWarn, m)
 }
 
 func (l *Logger) Warnf(template string, args ...interface{}) {
+	if !l.canOutput(LevelWarn) {
+		return
+	}
 	m := pkg.GetMessage(template, args)
 	l.log(LevelWarn, m)
 }
 
 func (l *Logger) Info(args ...interface{}) {
+	if !l.canOutput(LevelInfo) {
+		return
+	}
 	m := pkg.GetMessage("", args)
 	l.log(LevelInfo, m)
 }
 
 func (l *Logger) Infof(template string, args ...interface{}) {
+	if !l.canOutput(LevelInfo) {
+		return
+	}
 	m := pkg.GetMessage(template, args)
 	l.log(LevelInfo, m)
 }
 
 func (l *Logger) Debug(args ...interface{}) {
+	if !l.canOutput(LevelDebug) {
+		return
+	}
 	m := pkg.GetMessage("", args)
 	l.log(LevelDebug, m)
 }
 
 func (l *Logger) Debugf(template string, args ...interface{}) {
+	if !l.canOutput(LevelDebug) {
+		return
+	}
 	m := pkg.GetMessage(template, args)
 	l.log(LevelDebug, m)
 }

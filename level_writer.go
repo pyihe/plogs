@@ -34,7 +34,7 @@ func (l *Logger) addLevelWriter() {
 		l.writer.AddWriter(writer)
 	case WriteByLevelSeparated:
 		for _, level := range allLevels {
-			if l.outputLevel(level) {
+			if (l.config.logLevel & level) == level {
 				writer := &levelWriter{
 					LogWriter: internal.NewFileWriter(l.ctx, &l.waiter, pkg.JoinPath(config.logPath, subPath(level)), "temp.log", config.maxSize, config.maxAge),
 					level:     level,
@@ -45,9 +45,9 @@ func (l *Logger) addLevelWriter() {
 	case WriteByBoth:
 		targetLevel := make([]Level, 0, 8)
 		targetLevel = append(targetLevel, _LevelEnd)
-		for _, lv := range allLevels {
-			if l.outputLevel(lv) {
-				targetLevel = append(targetLevel, lv)
+		for _, level := range allLevels {
+			if (l.config.logLevel & level) == level {
+				targetLevel = append(targetLevel, level)
 			}
 		}
 		for _, level := range targetLevel {

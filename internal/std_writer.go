@@ -54,6 +54,7 @@ func (s *stdWriter) Stop() {
 	}
 	atomic.StoreInt32(&s.closed, 1)
 	s.clean()
+	close(s.writeBuffer)
 }
 
 func (s *stdWriter) clean() {
@@ -71,5 +72,4 @@ func (s *stdWriter) clean() {
 			os.Stdout.Write(m)
 		}
 	}
-	close(s.writeBuffer)
 }
