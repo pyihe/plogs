@@ -44,12 +44,15 @@ func main() {
 }
 
 ```
+
+### Terminal Screenshot
 ![](appendix/terminal.png)
 
+
+### File Screenshot
 ![](appendix/file.png)
 
-### Thanks 
-
+### Thanks
 感谢[Jetbrains开源开发许可证](https://www.jetbrains.com/zh-cn/community/opensource/#support) 提供的免费开发工具支持!
 
 ![](appendix/source_jetbrains.png)
