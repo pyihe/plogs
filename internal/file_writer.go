@@ -13,10 +13,6 @@ import (
 	"github.com/pyihe/plogs/pkg"
 )
 
-const (
-	bufferSize = 1 << 10
-)
-
 type fileWriter struct {
 	ctx         context.Context  // ctx
 	wg          *syncs.WgWrapper // waiter
@@ -54,7 +50,7 @@ func NewFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName 
 		maxAge:      maxAge,
 		currentSize: stat.Size(),
 		file:        file,
-		writeBuffer: make(chan []byte, bufferSize),
+		writeBuffer: make(chan []byte, 1<<10),
 	}
 }
 
@@ -78,7 +74,6 @@ func (fw *fileWriter) Stop() {
 	atomic.StoreInt32(&fw.closed, 1)
 
 	fw.clean()
-	close(fw.writeBuffer)
 }
 
 func (fw *fileWriter) Start() {
@@ -135,6 +130,8 @@ func (fw *fileWriter) clean() {
 	if fw.maxAge > 0 {
 		fw.checkLife()
 	}
+
+	fw.file.Close()
 }
 
 func (fw *fileWriter) writeToFile(msg ...[]byte) {

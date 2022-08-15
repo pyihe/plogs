@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/pyihe/plogs"
@@ -19,23 +20,19 @@ func main() {
 	}
 
 	logger := plogs.NewLogger(opts...)
-	//defer logger.Close()
+	defer logger.Close()
 
-	go func() {
-		TestLog("hello, I'm %s", "plogs")
-	}()
-	time.Sleep(3 * time.Second)
-	logger.Close()
+	TestLog("hello, I'm %s", "plogs")
 }
 
 func TestLog(message string, args ...interface{}) {
 	tag := time.Now()
 	for n := 0; n < 3; n++ {
 		for i := 1; i < 500000; i++ {
-			go plogs.Debugf(message, args...)
-			go plogs.Infof(message, args...)
-			go plogs.Warnf(message, args...)
-			go plogs.Errorf(message, args...)
+			plogs.Debugf(message, args...)
+			plogs.Infof(message, args...)
+			plogs.Warnf(message, args...)
+			plogs.Errorf(message, args...)
 			//plogs.Panicf(message, args...)
 			//plogs.Fatalf(message, args...)
 		}

@@ -54,7 +54,6 @@ func (s *stdWriter) Stop() {
 	}
 	atomic.StoreInt32(&s.closed, 1)
 	s.clean()
-	close(s.writeBuffer)
 }
 
 func (s *stdWriter) clean() {
