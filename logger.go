@@ -56,7 +56,8 @@ func NewLogger(opts ...Option) *Logger {
 }
 
 func (l *Logger) init() {
-	l.addLevelWriter()
+	err := l.addLevelWriter()
+	assert(err)
 }
 
 func (l *Logger) Close() {

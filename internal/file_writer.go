@@ -26,19 +26,19 @@ type fileWriter struct {
 	writeBuffer chan []byte      // 写缓存
 }
 
-func NewFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName string, maxSize int64, maxAge time.Duration) *fileWriter {
+func NewFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName string, maxSize int64, maxAge time.Duration) (LogWriter, error) {
 	if err := pkg.MakeDir(filePath); err != nil {
-		panic(err)
+		return nil, err
 	}
 	// 打开日志文件句柄
 	name := pkg.JoinPathName(filePath, fileName)
 	file, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	stat, err := os.Stat(name)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return &fileWriter{
 		closed:      0,
@@ -51,7 +51,7 @@ func NewFileWriter(ctx context.Context, wg *syncs.WgWrapper, filePath, fileName 
 		currentSize: stat.Size(),
 		file:        file,
 		writeBuffer: make(chan []byte, 1<<10),
-	}
+	}, nil
 }
 
 func (fw *fileWriter) Name() string {

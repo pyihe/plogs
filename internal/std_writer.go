@@ -15,12 +15,12 @@ type stdWriter struct {
 	writeBuffer chan []byte
 }
 
-func NewStdWriter(ctx context.Context, wg *syncs.WgWrapper) LogWriter {
+func NewStdWriter(ctx context.Context, wg *syncs.WgWrapper) (LogWriter, error) {
 	return &stdWriter{
 		ctx:         ctx,
 		wg:          wg,
-		writeBuffer: make(chan []byte, bufferSize),
-	}
+		writeBuffer: make(chan []byte, 1<<10),
+	}, nil
 }
 
 func (s *stdWriter) Name() string {

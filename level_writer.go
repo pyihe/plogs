@@ -10,34 +10,44 @@ type levelWriter struct {
 	level Level
 }
 
-func (l *Logger) addLevelWriter() {
-	config := l.config
+func (l *Logger) addLevelWriter() error {
+	var err error
+	var config = l.config
+	var allLevels = []Level{
+		LevelPanic, LevelFatal, LevelError, LevelWarn, LevelInfo, LevelDebug,
+	}
+
 	if config.stdout {
 		writer := &levelWriter{
 			level: _LevelBegin,
 		}
-		writer.LogWriter = internal.NewStdWriter(l.ctx, &l.waiter)
+		writer.LogWriter, _ = internal.NewStdWriter(l.ctx, &l.waiter)
 		l.writer.AddWriter(writer)
 	}
+
 	if config.logPath == "" {
-		return
+		return nil
 	}
-	allLevels := []Level{
-		LevelPanic, LevelFatal, LevelError, LevelWarn, LevelInfo, LevelDebug,
-	}
+
 	switch config.fileOption {
 	case WriteByLevelMerged:
 		writer := &levelWriter{
-			LogWriter: internal.NewFileWriter(l.ctx, &l.waiter, config.logPath, "temp.log", config.maxSize, config.maxAge),
-			level:     _LevelEnd,
+			level: _LevelEnd,
+		}
+		writer.LogWriter, err = internal.NewFileWriter(l.ctx, &l.waiter, config.logPath, "temp.log", config.maxSize, config.maxAge)
+		if err != nil {
+			return err
 		}
 		l.writer.AddWriter(writer)
 	case WriteByLevelSeparated:
 		for _, level := range allLevels {
 			if (l.config.logLevel & level) == level {
 				writer := &levelWriter{
-					LogWriter: internal.NewFileWriter(l.ctx, &l.waiter, pkg.JoinPath(config.logPath, subPath(level)), "temp.log", config.maxSize, config.maxAge),
-					level:     level,
+					level: level,
+				}
+				writer.LogWriter, err = internal.NewFileWriter(l.ctx, &l.waiter, pkg.JoinPath(config.logPath, subPath(level)), "temp.log", config.maxSize, config.maxAge)
+				if err != nil {
+					return err
 				}
 				l.writer.AddWriter(writer)
 			}
@@ -52,14 +62,25 @@ func (l *Logger) addLevelWriter() {
 		}
 		for _, level := range targetLevel {
 			writer := &levelWriter{
-				LogWriter: internal.NewFileWriter(l.ctx, &l.waiter, pkg.JoinPath(config.logPath, subPath(level)), "temp.log", config.maxSize, config.maxAge),
-				level:     level,
+				level: level,
+			}
+			writer.LogWriter, err = internal.NewFileWriter(l.ctx, &l.waiter, pkg.JoinPath(config.logPath, subPath(level)), "temp.log", config.maxSize, config.maxAge)
+			if err != nil {
+				return err
 			}
 			l.writer.AddWriter(writer)
 		}
 	}
+	return nil
 }
 
 func (lw *levelWriter) Name() string {
 	return subPath(lw.level)
+}
+
+func assert(err error) {
+	if err == nil {
+		return
+	}
+	panic(err)
 }
