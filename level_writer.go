@@ -78,9 +78,8 @@ func (lw *levelWriter) Name() string {
 	return subPath(lw.level)
 }
 
-func assert(err error) {
-	if err == nil {
-		return
+func assert(b bool, text string) {
+	if b {
+		panic(text)
 	}
-	panic(err)
 }

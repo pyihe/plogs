@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"github.com/pyihe/go-pkg/errors"
 	"github.com/pyihe/go-pkg/strings"
 )
 
@@ -31,19 +30,21 @@ func (m *MultipeWriters) AddWriter(writer LogWriter) {
 	return
 }
 
+func (m *MultipeWriters) WriteTo(b []byte, names ...string) (n int, err error) {
+	for _, name := range names {
+		writer, exist := m.writers[strings.ToLower(name)]
+		if exist {
+			n, err = writer.Write(b)
+		}
+	}
+	return
+}
+
 func (m *MultipeWriters) Write(b []byte) (n int, err error) {
 	for _, w := range m.writers {
 		n, err = w.Write(b)
 	}
 	return
-}
-
-func (m *MultipeWriters) WriteOne(name string, b []byte) (n int, err error) {
-	writer := m.writers[strings.ToLower(name)]
-	if writer != nil {
-		return writer.Write(b)
-	}
-	return 0, errors.New("not found writer")
 }
 
 func (m *MultipeWriters) Start() {

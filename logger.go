@@ -13,6 +13,7 @@ import (
 	"github.com/pyihe/go-pkg/buffers"
 	"github.com/pyihe/go-pkg/bytes"
 	"github.com/pyihe/go-pkg/syncs"
+	"github.com/pyihe/go-pkg/times"
 	"github.com/pyihe/plogs/internal"
 	"github.com/pyihe/plogs/pkg"
 )
@@ -56,8 +57,9 @@ func NewLogger(opts ...Option) *Logger {
 }
 
 func (l *Logger) init() {
-	err := l.addLevelWriter()
-	assert(err)
+	if err := l.addLevelWriter(); err != nil {
+		assert(true, err.Error())
+	}
 }
 
 func (l *Logger) Close() {
@@ -87,32 +89,37 @@ func (l *Logger) recover(message string) {
 func (l *Logger) write(level Level, message []byte) {
 	config := l.config
 	multipeWriter := l.writer
+	outputLevel := make([]string, 0, 4)
 
 	if config.stdout {
-		multipeWriter.WriteOne(subPath(_LevelBegin), message)
+		outputLevel = append(outputLevel, subPath(_LevelBegin))
 	}
 	switch config.fileOption {
 	case WriteByLevelMerged:
-		multipeWriter.WriteOne(subPath(_LevelEnd), message)
+		outputLevel = append(outputLevel, subPath(_LevelEnd))
 	case WriteByLevelSeparated:
-		multipeWriter.WriteOne(subPath(level), message)
+		outputLevel = append(outputLevel, subPath(level))
 	case WriteByBoth:
-		multipeWriter.WriteOne(subPath(_LevelEnd), message)
-		multipeWriter.WriteOne(subPath(level), message)
+		outputLevel = append(outputLevel, subPath(_LevelEnd))
+		outputLevel = append(outputLevel, subPath(level))
 	}
+
+	multipeWriter.WriteTo(message, outputLevel...)
 }
 
 func (l *Logger) log(level Level, message string) {
+	var (
+		now         = time.Now()
+		appName     = l.config.name                         // 应用名
+		levelPrefix = level.prefix()                        // 日志级别
+		timeDesc    = now.Format(times.SlashWithMillFormat) // 时间
+	)
+
 	_, fileName, line, ok := runtime.Caller(3)
 	if !ok {
-		return
+		fileName = "???"
+		line = 0
 	}
-
-	var (
-		appName     = l.config.name                                   // 应用名
-		levelPrefix = level.prefix()                                  // 日志级别
-		timeDesc    = time.Now().Format("2006/01/02 15:04:05.000000") // 时间
-	)
 
 	b := buffers.Get()
 	// write app name
@@ -163,9 +170,7 @@ func (l *Logger) canOutput(level Level) bool {
 }
 
 func (l *Logger) start() {
-	if l.writer.Count() == 0 {
-		panic("where the log will be written?")
-	}
+	assert(l.writer.Count() == 0, "where the log will be written?")
 	l.writer.Start()
 }
 

@@ -44,6 +44,8 @@ github.com/pyihe/go-pkg v0.0.0-20220815070004-36122134d1d9 h1:oCMFjIjpsj5Dy6CR4Y
 github.com/pyihe/go-pkg v0.0.0-20220815070004-36122134d1d9/go.mod h1:V39MqWqPggKoViCq3Y7GcMq5M+f7l+LD+DQEeY7BMDg=
 github.com/pyihe/go-pkg v0.0.0-20220815141551-b8da3582abfd h1:bkgxhj5vRxnRWmGo4Ce11sRFWtvUhALeHSoAgMo0N04=
 github.com/pyihe/go-pkg v0.0.0-20220815141551-b8da3582abfd/go.mod h1:V39MqWqPggKoViCq3Y7GcMq5M+f7l+LD+DQEeY7BMDg=
+github.com/pyihe/go-pkg v0.0.0-20220816061532-b61575b24296 h1:LGdBZSYletdeLGltXviXw1S/YNRxpSvBKPMwmV7qIb8=
+github.com/pyihe/go-pkg v0.0.0-20220816061532-b61575b24296/go.mod h1:V39MqWqPggKoViCq3Y7GcMq5M+f7l+LD+DQEeY7BMDg=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
 github.com/rogpeppe/go-internal v1.8.0/go.mod h1:WmiCO8CzOY8rg0OYDC4/i/2WRWAB6poM+XZ2dLUbcbE=
