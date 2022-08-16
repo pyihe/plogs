@@ -16,33 +16,42 @@
 package main
 
 import (
-    "time"
+	"fmt"
+	"time"
 
-    "github.com/pyihe/plogs"
+	"github.com/pyihe/go-pkg/tools"
+	"github.com/pyihe/plogs"
 )
 
 func main() {
-    opts := []plogs.Option{
-        plogs.WithName("ALTIMA"),
-        plogs.WithFileOption(plogs.WriteByLevelMerged),
-        plogs.WithLogPath("./logs"),
-        plogs.WithLogLevel(plogs.LevelFatal | plogs.LevelError | plogs.LevelWarn | plogs.LevelInfo | plogs.LevelDebug),
-        plogs.WithStdout(true),
-        plogs.WithMaxAge(24 * time.Hour),
-        plogs.WithMaxSize(10 * 1024 * 1024),
-    }
-    
-    logger := plogs.NewLogger(opts...)
-    defer logger.Close()
-    
-    plogs.Errorf("hello, this is level error")
-    plogs.Warnf("hello, this is level warn!")
-    plogs.Infof("hello, this is level info!")
-    plogs.Debugf("hello, this is level debug!")
-    plogs.Fatalf("hello, this is level fatal!")
-    plogs.Panic("hello, this is level panic!")
-}
+	opts := []plogs.Option{
+		plogs.WithName("ALTIMA"),
+		plogs.WithFileOption(plogs.WriteByLevelMerged),
+		plogs.WithLogPath("./logs"),
+		plogs.WithLogLevel(plogs.LevelFatal | plogs.LevelError | plogs.LevelWarn | plogs.LevelInfo | plogs.LevelDebug),
+		plogs.WithStdout(true),
+		plogs.WithMaxAge(24 * time.Hour),
+		plogs.WithMaxSize(10 * 1024 * 1024),
+	}
 
+	logger := plogs.NewLogger(opts...)
+	defer logger.Close()
+
+	go func() {
+		tag := time.Now()
+		for n := 0; n < 3; n++ {
+			for i := 1; i < 500000; i++ {
+				plogs.Debugf("hello, this is level panic!")
+				plogs.Infof("hello, this is level panic!")
+				plogs.Warnf("hello, this is level panic!")
+				plogs.Errorf("hello, this is level panic!")
+			}
+		}
+		fmt.Printf("time consume: %v\n", time.Now().Sub(tag).Milliseconds())
+	}()
+
+	tools.Wait()
+}
 ```
 
 ### Terminal Screenshot
