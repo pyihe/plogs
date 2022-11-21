@@ -66,8 +66,6 @@ func subPath(l Level) (suffix string) {
 		suffix = "infos"
 	case LevelDebug:
 		suffix = "debugs"
-	case _LevelEnd:
-		suffix = "merged"
 	case _LevelBegin:
 		suffix = "begins"
 	}
